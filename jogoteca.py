@@ -1,6 +1,6 @@
 from crypt import methods
 from pickle import NONE
-from flask import Flask, render_template, request, redirect , session, flash
+from flask import Flask, render_template, request, redirect , session, flash, url_for
 
 
 class Jogo():
@@ -14,6 +14,8 @@ jogo3 = Jogo('GTAV', 'Simulação', 'XboxONE')
 lista_jogos = [jogo1,jogo2,jogo3]
 
 app = Flask(__name__)
+app.url_map.strict_slashes = False
+
 app.secret_key = 'alura'
 
 
@@ -22,9 +24,15 @@ def display():
 
     return render_template('lista.html',titulo='jogos',jogos= lista_jogos)
 
-@app.route('/novo', methods = ['GET', 'POST'])
+@app.route('/novo_jogo', methods = ['GET', 'POST'])
 def novo():
-    return render_template('novo.html', titulo='Novo Jogo')
+    if 'usuario_logado' in session:
+        if session['usuario_logado'] != None:
+            return render_template('novo.html', titulo='Novo Jogo')
+        else:
+            return redirect(url_for('login', next=url_for('novo')))
+    else:
+        return redirect(url_for('login', next=url_for('novo')))
 
 @app.route('/criar', methods=['POST'])
 def criar():
@@ -33,28 +41,30 @@ def criar():
     console = request.form['console']
     jogo = Jogo(nome,categoria,console)
     lista_jogos.append(jogo)
-    return redirect('/')
+    return redirect(url_for('display'))
 
 @app.route('/login',methods=['GET', 'POST'])
 def login():
-    return render_template('login.html')
+    next = request.args.get('next')
+    return render_template('login.html',next=next)
 
 @app.route('/autenticar',methods=['POST'])
-def autenficar():
+def autenticar():
     if request.form['senha'] == 'toti':
         session['usuario_logado'] = request.form['usuario']
         nome_user = session['usuario_logado']
         flash(f'{nome_user} logado com sucesso')
-        return redirect('/')
+        next_page = request.form['next']
+        return redirect(next_page)
     else:
         flash('Usuário não foi logado com sucesso')
-        return redirect('/login')
+        return redirect(url_for('display'))
 
 @app.route('/logout')
 def logout():
     session['usuario_logado'] = None
     flash('Logout efetuado com sucesso')
-    return redirect('/')
+    return redirect(url_for('display'))
 
 
 
