@@ -1,35 +1,33 @@
 from crypt import methods
 from pickle import NONE
 from flask import Flask, render_template, request, redirect , session, flash, url_for
+from model.sql_alchemy_para_db import db
+from model.modelos import UsuarioModel, JogoModel
+from flask_admin.contrib.sqla import ModelView
+from pathlib import Path
+from flask_admin import Admin
 
 
-class Jogo():
-    def __init__(self,nome,categoria,console):
-        self.nome = nome
-        self.categoria = categoria
-        self.console = console
-jogo1 = Jogo('Tetris', 'Puzzle', 'Atari')
-jogo2 = Jogo('God of war', 'Ação', 'PS4')
-jogo3 = Jogo('GTAV', 'Simulação', 'XboxONE')
-
-lista_jogos = [jogo1,jogo2,jogo3]
-
-class Usuario():
-    def __init__(self,nome,username,senha):
-        self.nome = nome
-        self.username = username
-        self.senha = senha
-
-usuario1= Usuario('Eduardo','Barros','2.718')
-usuario2= Usuario('Sergio','Sergião','2.718')
-usuario3= Usuario('Alan','Math','2.718')
-
-usuarios = {usuario1.nome: usuario1,usuario2.nome: usuario2,usuario3.nome: usuario3,}
+FILE = Path(__file__).resolve()
+src_folder = FILE.parents[0]
+rel_arquivo_db = Path('model/VideoGameLibrary.db')
+caminho_arq_db = src_folder / rel_arquivo_db
 
 app = Flask(__name__)
-app.url_map.strict_slashes = False
+admin = Admin(app, name='VideoGameLibrary', template_mode='bootstrap3')
+admin.add_view(ModelView(JogoModel, db.session))
+admin.add_view(ModelView(UsuarioModel, db.session))
 
-app.secret_key = 'alura'
+app.url_map.strict_slashes = False
+app.config['SECRET_KEY'] = "3.1415926535"
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{caminho_arq_db.resolve()}'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+@app.before_first_request
+def create_tables():
+    db.create_all()
+
+()
 
 
 @app.route('/')
@@ -52,7 +50,7 @@ def criar():
     nome = request.form['nome']
     categoria = request.form['categoria']
     console = request.form['console']
-    jogo = Jogo(nome,categoria,console)
+    jogo = JogoModel(nome,categoria,console)
     lista_jogos.append(jogo)
     return redirect(url_for('display'))
 
@@ -86,4 +84,7 @@ def logout():
 
 
 
-app.run(debug=True)
+
+if __name__ == '__main__':
+    db.init_app(app)
+    app.run(debug=True)
