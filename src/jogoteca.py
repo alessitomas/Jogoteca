@@ -27,11 +27,11 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 def create_tables():
     db.create_all()
 
-()
 
 
 @app.route('/')
 def display():
+    lista_jogos = JogoModel.query.order_by(JogoModel.id)
 
     return render_template('lista.html',titulo='jogos',jogos= lista_jogos)
 
@@ -45,13 +45,18 @@ def novo():
     else:
         return redirect(url_for('login', proxima=url_for('novo')))
 
-@app.route('/criar', methods=['POST'])
+@app.route('/criar', methods=['GET','POST'])
 def criar():
     nome = request.form['nome']
     categoria = request.form['categoria']
     console = request.form['console']
-    jogo = JogoModel(nome,categoria,console)
-    lista_jogos.append(jogo)
+    jogo = JogoModel.query.filter_by(nome=nome).first()
+    if jogo:
+        flash('Jogo já existente')
+        return redirect(url_for('display'))
+    else:
+        novo_jogo = JogoModel(nome,categoria,console)
+        novo_jogo.save()
     return redirect(url_for('display'))
 
 @app.route('/login',methods=['GET', 'POST'])
@@ -61,15 +66,13 @@ def login():
 
 @app.route('/autenticar',methods=['GET','POST'])
 def autenticar():
-    if request.form['usuario'] in usuarios:
-        usuario = usuarios[request.form['usuario']]
+    usuario = UsuarioModel.query.filter_by(username =request.form['usuario']).first()
+    if usuario:
         if request.form['senha'] == usuario.senha:
             session['usuario_logado'] = usuario.username
             flash(f'{usuario.username} Logado com sucesso')
             proxima_pagina = request.form['proxima']
-
             return redirect(proxima_pagina)
-
     else:
         flash('Usuário não foi logado com sucesso')
         return redirect(url_for('login'))
